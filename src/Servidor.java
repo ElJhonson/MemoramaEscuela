@@ -41,6 +41,30 @@ public class Servidor extends javax.swing.JFrame {
         }
     }
 
+    private static void enviarUsuariosConectados() {
+        StringBuilder lista = new StringBuilder("USUARIOS_CONECTADOS:");
+
+        synchronized (usuariosConectados) {
+            for (String username : usuariosConectados.keySet()) {
+                if (UsuarioUtil.estaDisponible(username)) {
+                    lista.append(username).append(",");
+                }
+            }
+        }
+
+        // Elimina la última coma
+        if (lista.charAt(lista.length() - 1) == ',') {
+            lista.deleteCharAt(lista.length() - 1);
+        }
+
+        // Enviar la lista a todos los clientes
+        synchronized (usuariosConectados) {
+            for (PrintWriter out : usuariosConectados.values()) {
+                out.println(lista.toString());
+            }
+        }
+    }
+
     private static class ClientHandler extends Thread {
 
         private Socket socket;
@@ -76,6 +100,7 @@ public class Servidor extends javax.swing.JFrame {
                     String pass = partes[2];
                     if (UsuarioUtil.iniciarSesion(usuario, pass)) {
                         out.println("LOGIN_OK");
+                        UsuarioUtil.estadoConexion(usuario, true);
                         this.userName = usuario;
                         synchronized (usuariosConectados) {
                             usuariosConectados.put(userName, out);
@@ -83,6 +108,7 @@ public class Servidor extends javax.swing.JFrame {
 
                     } else {
                         out.println("LOGIN_FAIL");
+                        UsuarioUtil.estadoConexion(usuario, false);
                         return;
                     }
                 } else if ("REGISTRO".equalsIgnoreCase(tipo) && partes.length == 6) {
@@ -94,6 +120,8 @@ public class Servidor extends javax.swing.JFrame {
 
                     if (UsuarioUtil.registrar(nombre, email, telefono, usuario, pass)) {
                         out.println("REGISTRO_OK");
+                        UsuarioUtil.estadoConexion(usuario, true);
+                        enviarUsuariosConectados();
                         this.userName = usuario;
                         synchronized (usuariosConectados) {
                             usuariosConectados.put(userName, out);
@@ -101,6 +129,7 @@ public class Servidor extends javax.swing.JFrame {
 
                     } else {
                         out.println("REGISTRO_FAIL");
+                        UsuarioUtil.estadoConexion(usuario, false);
                         return; // cerramos la conexión si el registro falla
                     }
                 } else {
@@ -149,13 +178,40 @@ public class Servidor extends javax.swing.JFrame {
                             if (salidaOrigen != null) {
                                 if ("ACEPTAR".equalsIgnoreCase(respuesta)) {
                                     salidaOrigen.println("INVITACION_ACEPTADA:" + userName + ";" + dificultad);
+                                    UsuarioUtil.estadoJuego(userName, "ocupado");
+                                    UsuarioUtil.estadoJuego(origen, "ocupado");
+                                    enviarUsuariosConectados();
                                     out.println("PARTIDA_CONFIRMADA:" + origen + ";" + dificultad);
                                     // Aquí también podrías lanzar una nueva lógica para iniciar la partida entre ambos
                                 } else {
                                     salidaOrigen.println("INVITACION_RECHAZADA:" + userName);
+                                    UsuarioUtil.estadoJuego(userName, "disponible");
+                                    enviarUsuariosConectados();
                                 }
                             }
                         }
+                    } else if (input.equals("PARTIDA_TERMINADA")) {
+                        UsuarioUtil.estadoJuego(userName, "disponible");
+                        enviarUsuariosConectados(); // Para actualizar la lista en todos
+                    } else if (input.startsWith("FIN_PARTIDA;")) {
+                        String contrincante = input.split(";")[1];
+
+                        // Cambiar estado del jugador que la envió
+                        UsuarioUtil.estadoJuego(userName, "disponible");
+
+                        // Notificar al contrincante que la partida terminó
+                        PrintWriter salidaContrincante;
+                        synchronized (usuariosConectados) {
+                            salidaContrincante = usuariosConectados.get(contrincante);
+                        }
+
+                        if (salidaContrincante != null) {
+                            salidaContrincante.println("CIERRE_FORZADO:" + userName);
+                            UsuarioUtil.estadoJuego(contrincante, "disponible");
+                        }
+
+                        // Actualizar lista a todos
+                        enviarUsuariosConectados();
                     }
 
                 }
@@ -170,6 +226,8 @@ public class Servidor extends javax.swing.JFrame {
                     usuariosConectados.remove(userName);
 
                     broadcastUserList();
+                    UsuarioUtil.estadoConexion(userName, false);
+
                 }
                 try {
                     socket.close();
@@ -180,6 +238,8 @@ public class Servidor extends javax.swing.JFrame {
                     clientWriters.remove(out);
                 }
                 taMensajes.append(userName + " se ha desconectado.\n");
+                UsuarioUtil.estadoJuego(userName, "disponible");
+                enviarUsuariosConectados();
             }
         }
 

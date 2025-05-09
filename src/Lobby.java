@@ -2,8 +2,7 @@
 import java.awt.Color;
 import java.io.*;
 import java.net.*;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+
 import javax.swing.*;
 
 public class Lobby extends javax.swing.JFrame {
@@ -17,6 +16,7 @@ public class Lobby extends javax.swing.JFrame {
     JTextField cajasTexto[] = new JTextField[4];
     JButton botones[] = new JButton[2];
     DefaultListModel modeloLista = new DefaultListModel();
+    Memorama partida;
 
     private boolean connected = false;
     private String usuarioSeleccionado;
@@ -76,12 +76,37 @@ public class Lobby extends javax.swing.JFrame {
                         JOptionPane.showMessageDialog(null,
                                 invitado + " aceptó tu invitación. ¡Inicia la partida (" + dificultad + ")!");
 
-                        // Aquí puedes abrir una nueva ventana con el juego
-                        // lanzarVentanaJuego(invitado, dificultad);
+                        SwingUtilities.invokeLater(() -> {
+                            partida = new Memorama(invitado, dificultad, out, usuarioActual);
+                            partida.setVisible(true);
+                        });
+                    } else if (linea.startsWith("PARTIDA_CONFIRMADA:")) {
+                        String[] partes = linea.substring("PARTIDA_CONFIRMADA:".length()).split(";");
+                        String invitador = partes[0];
+                        String dificultad = partes[1];
+
+                        JOptionPane.showMessageDialog(null,
+                                "Has aceptado jugar contra " + invitador + ". ¡Inicia la partida (" + dificultad + ")!");
+
+                        SwingUtilities.invokeLater(() -> {
+                            partida = new Memorama(invitador, dificultad, out, usuarioActual);
+                            partida.setVisible(true);
+                        });
                     } else if (linea.startsWith("INVITACION_RECHAZADA:")) {
                         String rechazante = linea.substring("INVITACION_RECHAZADA:".length());
                         JOptionPane.showMessageDialog(null,
                                 rechazante + " rechazó tu invitación.");
+                    } else if (linea.startsWith("CIERRE_FORZADO:")) {
+                        String otroJugador = linea.substring("CIERRE_FORZADO:".length());
+
+                        JOptionPane.showMessageDialog(null,
+                                "Tu contrincante (" + otroJugador + ") ha salido de la partida. Volverás al lobby.");
+
+                        // Cerrar la ventana de juego si está abierta
+                        if (partida != null) {
+                            partida.dispose(); // o setVisible(false)
+                            partida = null;
+                        }
                     } else {
                         System.out.println("Mensaje recibido: " + linea);
                     }

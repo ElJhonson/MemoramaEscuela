@@ -112,7 +112,7 @@ public class InicioSesion extends javax.swing.JFrame {
             out = new PrintWriter(socket.getOutputStream(), true);
             in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 
-            String username = "luis78";
+          String username = "jhonson345";
             String password = "seguro123";
             out.println("LOGIN;" + username + ";" + password);
 
