@@ -31,16 +31,6 @@ public class Servidor extends javax.swing.JFrame {
         }
     }
 
-    private static void broadcastUserList() {
-        String usuarios = String.join(",", connectedUsers);
-
-        synchronized (clientWriters) {
-            for (PrintWriter writer : clientWriters) {
-                writer.println("USUARIOS_CONECTADOS:" + usuarios);
-            }
-        }
-    }
-
     private static void enviarUsuariosConectados() {
         StringBuilder lista = new StringBuilder("USUARIOS_CONECTADOS:");
 
@@ -102,9 +92,11 @@ public class Servidor extends javax.swing.JFrame {
                         out.println("LOGIN_OK");
                         UsuarioUtil.estadoConexion(usuario, true);
                         this.userName = usuario;
+
                         synchronized (usuariosConectados) {
                             usuariosConectados.put(userName, out);
                         }
+                        enviarUsuariosConectados();
 
                     } else {
                         out.println("LOGIN_FAIL");
@@ -121,11 +113,12 @@ public class Servidor extends javax.swing.JFrame {
                     if (UsuarioUtil.registrar(nombre, email, telefono, usuario, pass)) {
                         out.println("REGISTRO_OK");
                         UsuarioUtil.estadoConexion(usuario, true);
-                        enviarUsuariosConectados();
+
                         this.userName = usuario;
                         synchronized (usuariosConectados) {
                             usuariosConectados.put(userName, out);
                         }
+                        enviarUsuariosConectados();
 
                     } else {
                         out.println("REGISTRO_FAIL");
@@ -141,7 +134,6 @@ public class Servidor extends javax.swing.JFrame {
                     connectedUsers.add(userName);
                     taMensajes.append(userName + " se ha conectado.\n");
                 }
-                broadcastUserList();
 
                 String input;
                 while ((input = in.readLine()) != null) {
@@ -225,7 +217,6 @@ public class Servidor extends javax.swing.JFrame {
                     }
                     usuariosConectados.remove(userName);
 
-                    broadcastUserList();
                     UsuarioUtil.estadoConexion(userName, false);
 
                 }

@@ -4,14 +4,7 @@ import java.awt.event.WindowEvent;
 import java.io.PrintWriter;
 import javax.swing.JFrame;
 
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JFrame.java to edit this template
- */
-/**
- *
- * @author angel
- */
+
 public class Memorama extends javax.swing.JFrame {
 
     public Memorama(String contrincante, String dificultad, PrintWriter out, String usuarioActual) {
