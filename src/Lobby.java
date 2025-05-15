@@ -28,6 +28,7 @@ public class Lobby extends javax.swing.JFrame {
         this.in = in;
         this.nombreLocal = nombreLocal;
         initComponents();
+        setTitle("Jugador: " + nombreLocal);
         modeloLista = new DefaultListModel<>();
         LClientes.setModel(modeloLista);
 
@@ -82,6 +83,7 @@ public class Lobby extends javax.swing.JFrame {
                                 invitado + " aceptó tu invitación. ¡Inicia la partida (" + dificultad + ")!");
                         partidaTerminada = false;
                         SwingUtilities.invokeLater(() -> {
+                            this.setState(JFrame.ICONIFIED);
                             partida = new Memorama(invitado, dificultad, out, usuarioActual);
                             partida.setVisible(true);
                         });
@@ -92,7 +94,7 @@ public class Lobby extends javax.swing.JFrame {
                         partidaTerminada = false;
                         JOptionPane.showMessageDialog(null,
                                 "Has aceptado jugar contra " + invitador + ". ¡Inicia la partida (" + dificultad + ")!");
-
+                        this.setState(JFrame.ICONIFIED);
                         SwingUtilities.invokeLater(() -> {
                             partida = new Memorama(invitador, dificultad, out, usuarioActual);
                             partida.setVisible(true);
@@ -109,9 +111,10 @@ public class Lobby extends javax.swing.JFrame {
 
                             JOptionPane.showMessageDialog(null,
                                     "Tu contrincante (" + otroJugador + ") ha salido de la partida. Volverás al lobby.");
-
+                            this.setState(JFrame.NORMAL);
                             if (otroJugador != null && !otroJugador.trim().isEmpty()) {
                                 out.println("FIN_PARTIDA;" + otroJugador);
+                                this.setState(JFrame.NORMAL);
                             }
 
                             if (partida != null) {

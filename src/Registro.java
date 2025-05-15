@@ -13,7 +13,7 @@ public class Registro extends javax.swing.JFrame {
     PrintWriter out;
     BufferedReader in;
     Lobby lobby;
-    InicioSesion inicio;
+    IniciarSesion inicio;
 
     public Registro() {
         initComponents();
@@ -181,7 +181,7 @@ public class Registro extends javax.swing.JFrame {
     }//GEN-LAST:event_BRegistrarActionPerformed
 
     private void jLabel8MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jLabel8MouseClicked
-        inicio = new InicioSesion();
+        inicio = new IniciarSesion();
         this.dispose();
         inicio.setVisible(true);
     }//GEN-LAST:event_jLabel8MouseClicked

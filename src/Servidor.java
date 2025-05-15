@@ -50,17 +50,6 @@ public class Servidor extends javax.swing.JFrame {
         }
     }
 
-    public static boolean invitar(String usernameDestino) {
-        if (!UsuarioUtil.estaDisponible(usernameDestino)) {
-            System.out.println("El usuario " + usernameDestino + " está ocupado o desconectado.");
-            return false;
-        }
-
-        // Aquí puedes enviar una notificación por socket al usuario destino (opcional)
-        System.out.println("Invitación enviada a " + usernameDestino);
-        return true;
-    }
-
     private static void actualizarEstadoUsuario(String usuario, String estado) {
         if (usuario == null || usuario.trim().isEmpty()) {
             return;
@@ -215,10 +204,11 @@ public class Servidor extends javax.swing.JFrame {
                         if (userName != null) {
                             actualizarEstadoUsuario(userName, "disponible");
                         }
-
+                        
                         enviarUsuariosConectados(); // Para actualizar la lista en todos
 
                     } else if (input.startsWith("FIN_PARTIDA;")) {
+                        
                         partes = input.split(";");
                         if (partes.length >= 2) {
                             String contrincante = partes[1].trim();
