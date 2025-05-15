@@ -12,6 +12,8 @@ public class Servidor extends javax.swing.JFrame {
     private static final List<ClientHandler> clientHandlers = new ArrayList<>();
     private static JTextArea taMensajes;
     private static final Map<String, PrintWriter> usuariosConectados = new HashMap<>();
+    // Map<username, estado>
+    private static Map<String, String> estadosUsuarios = Collections.synchronizedMap(new HashMap<>());
 
     public Servidor() {
         initComponents();
@@ -32,27 +34,46 @@ public class Servidor extends javax.swing.JFrame {
     }
 
     private static void enviarUsuariosConectados() {
-        StringBuilder lista = new StringBuilder("USUARIOS_CONECTADOS:");
-
-        synchronized (usuariosConectados) {
-            for (String username : usuariosConectados.keySet()) {
-                if (UsuarioUtil.estaDisponible(username)) {
-                    lista.append(username).append(",");
+        StringBuilder sb = new StringBuilder();
+        synchronized (estadosUsuarios) {
+            estadosUsuarios.forEach((usuario, estado) -> {
+                if (!"desconectado".equals(estado)) {
+                    sb.append(usuario).append(";").append(estado).append(",");
                 }
+            });
+        }
+        String listaUsuarios = sb.length() > 0 ? sb.substring(0, sb.length() - 1) : "";
+        synchronized (clientWriters) {
+            for (PrintWriter writer : clientWriters) {
+                writer.println("USUARIOS_CONECTADOS:" + listaUsuarios);
             }
         }
+    }
 
-        // Elimina la última coma
-        if (lista.charAt(lista.length() - 1) == ',') {
-            lista.deleteCharAt(lista.length() - 1);
+    public static boolean invitar(String usernameDestino) {
+        if (!UsuarioUtil.estaDisponible(usernameDestino)) {
+            System.out.println("El usuario " + usernameDestino + " está ocupado o desconectado.");
+            return false;
         }
 
-        // Enviar la lista a todos los clientes
-        synchronized (usuariosConectados) {
-            for (PrintWriter out : usuariosConectados.values()) {
-                out.println(lista.toString());
+        // Aquí puedes enviar una notificación por socket al usuario destino (opcional)
+        System.out.println("Invitación enviada a " + usernameDestino);
+        return true;
+    }
+
+    private static void actualizarEstadoUsuario(String usuario, String estado) {
+        if (usuario == null || usuario.trim().isEmpty()) {
+            return;
+        }
+        UsuarioUtil.estadoJuego(usuario, estado);  // actualiza BD
+        synchronized (estadosUsuarios) {
+            if ("desconectado".equals(estado)) {
+                estadosUsuarios.remove(usuario);
+            } else {
+                estadosUsuarios.put(usuario, estado);
             }
         }
+        enviarUsuariosConectados();
     }
 
     private static class ClientHandler extends Thread {
@@ -93,8 +114,12 @@ public class Servidor extends javax.swing.JFrame {
                         UsuarioUtil.estadoConexion(usuario, true);
                         this.userName = usuario;
 
+                        actualizarEstadoUsuario(userName, "disponible");
+
                         synchronized (usuariosConectados) {
                             usuariosConectados.put(userName, out);
+                            estadosUsuarios.put(userName, "disponible"); // estado inicial
+
                         }
                         enviarUsuariosConectados();
 
@@ -113,16 +138,21 @@ public class Servidor extends javax.swing.JFrame {
                     if (UsuarioUtil.registrar(nombre, email, telefono, usuario, pass)) {
                         out.println("REGISTRO_OK");
                         UsuarioUtil.estadoConexion(usuario, true);
+                        UsuarioUtil.estadoJuego(usuario, "disponible");
 
                         this.userName = usuario;
                         synchronized (usuariosConectados) {
                             usuariosConectados.put(userName, out);
+                            estadosUsuarios.put(userName, "disponible");
+
                         }
                         enviarUsuariosConectados();
 
                     } else {
                         out.println("REGISTRO_FAIL");
                         UsuarioUtil.estadoConexion(usuario, false);
+                        UsuarioUtil.estadoJuego(usuario, "desconectado");
+
                         return; // cerramos la conexión si el registro falla
                     }
                 } else {
@@ -148,11 +178,10 @@ public class Servidor extends javax.swing.JFrame {
                             synchronized (usuariosConectados) {
                                 salidaInvitado = usuariosConectados.get(invitado);
                             }
-
-                            if (salidaInvitado != null) {
+                            if (salidaInvitado != null && UsuarioUtil.estaDisponible(invitado)) {
                                 salidaInvitado.println("INVITACION_DE:" + userName + ";" + dificultad);
                             } else {
-                                out.println("ERROR: Usuario no disponible.");
+                                out.println("ERROR: Usuario no disponible para invitación.");
                             }
                         }
                     } else if (input.startsWith("INVITACION_RESPUESTA;")) {
@@ -169,41 +198,58 @@ public class Servidor extends javax.swing.JFrame {
 
                             if (salidaOrigen != null) {
                                 if ("ACEPTAR".equalsIgnoreCase(respuesta)) {
+                                    actualizarEstadoUsuario(userName, "ocupado");
+                                    actualizarEstadoUsuario(origen, "ocupado");
+                                    enviarUsuariosConectados();
                                     salidaOrigen.println("INVITACION_ACEPTADA:" + userName + ";" + dificultad);
-                                    UsuarioUtil.estadoJuego(userName, "ocupado");
-                                    UsuarioUtil.estadoJuego(origen, "ocupado");
-                                    enviarUsuariosConectados();
                                     out.println("PARTIDA_CONFIRMADA:" + origen + ";" + dificultad);
-                                    // Aquí también podrías lanzar una nueva lógica para iniciar la partida entre ambos
                                 } else {
-                                    salidaOrigen.println("INVITACION_RECHAZADA:" + userName);
-                                    UsuarioUtil.estadoJuego(userName, "disponible");
+                                    actualizarEstadoUsuario(userName, "disponible");
                                     enviarUsuariosConectados();
+                                    salidaOrigen.println("INVITACION_RECHAZADA:" + userName);
+
                                 }
                             }
                         }
                     } else if (input.equals("PARTIDA_TERMINADA")) {
-                        UsuarioUtil.estadoJuego(userName, "disponible");
+                        if (userName != null) {
+                            actualizarEstadoUsuario(userName, "disponible");
+                        }
+
                         enviarUsuariosConectados(); // Para actualizar la lista en todos
+
                     } else if (input.startsWith("FIN_PARTIDA;")) {
-                        String contrincante = input.split(";")[1];
+                        partes = input.split(";");
+                        if (partes.length >= 2) {
+                            String contrincante = partes[1].trim();
 
-                        // Cambiar estado del jugador que la envió
-                        UsuarioUtil.estadoJuego(userName, "disponible");
+                            // Validar nombres válidos
+                            if (userName == null || userName.trim().isEmpty()
+                                    || contrincante == null || contrincante.trim().isEmpty()) {
+                                System.out.println("FIN_PARTIDA recibido con datos inválidos. Ignorado.");
+                                return;
+                            }
 
-                        // Notificar al contrincante que la partida terminó
-                        PrintWriter salidaContrincante;
-                        synchronized (usuariosConectados) {
-                            salidaContrincante = usuariosConectados.get(contrincante);
+                            // Cambiar estado del jugador que la envió
+                            UsuarioUtil.estadoJuego(userName, "disponible");
+                            actualizarEstadoUsuario(userName, "disponible");
+
+                            actualizarEstadoUsuario(contrincante, "disponible");
+
+                            // Notificar al contrincante que la partida terminó
+                            PrintWriter salidaContrincante;
+                            synchronized (usuariosConectados) {
+                                salidaContrincante = usuariosConectados.get(contrincante);
+                            }
+
+                            if (salidaContrincante != null) {
+                                salidaContrincante.println("CIERRE_FORZADO:" + userName);
+                                UsuarioUtil.estadoJuego(contrincante, "disponible");
+                            }
+
+                            // Actualizar lista a todos
+                            enviarUsuariosConectados();
                         }
-
-                        if (salidaContrincante != null) {
-                            salidaContrincante.println("CIERRE_FORZADO:" + userName);
-                            UsuarioUtil.estadoJuego(contrincante, "disponible");
-                        }
-
-                        // Actualizar lista a todos
-                        enviarUsuariosConectados();
                     }
 
                 }
@@ -215,9 +261,14 @@ public class Servidor extends javax.swing.JFrame {
                     synchronized (connectedUsers) {
                         connectedUsers.remove(userName);
                     }
-                    usuariosConectados.remove(userName);
-
+                    synchronized (usuariosConectados) {
+                        usuariosConectados.remove(userName);
+                    }
                     UsuarioUtil.estadoConexion(userName, false);
+                    actualizarEstadoUsuario(userName, "desconectado");
+
+                    taMensajes.append(userName + " se ha desconectado.\n");
+                    enviarUsuariosConectados();
 
                 }
                 try {
@@ -228,12 +279,9 @@ public class Servidor extends javax.swing.JFrame {
                 synchronized (clientWriters) {
                     clientWriters.remove(out);
                 }
-                taMensajes.append(userName + " se ha desconectado.\n");
-                UsuarioUtil.estadoJuego(userName, "disponible");
-                enviarUsuariosConectados();
+
             }
         }
-
     }
 
     /**

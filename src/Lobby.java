@@ -28,6 +28,9 @@ public class Lobby extends javax.swing.JFrame {
         this.in = in;
         this.nombreLocal = nombreLocal;
         initComponents();
+        modeloLista = new DefaultListModel<>();
+        LClientes.setModel(modeloLista);
+
         setLocationRelativeTo(this);
         LNombre.setText(this.nombreLocal);
 
@@ -43,6 +46,8 @@ public class Lobby extends javax.swing.JFrame {
         LClientes.setModel(modeloLista);
         escuchaServidor();
     }
+
+    private boolean partidaTerminada = false;
 
     private void escuchaServidor() {
         Thread escucha = new Thread(() -> {
@@ -75,7 +80,7 @@ public class Lobby extends javax.swing.JFrame {
 
                         JOptionPane.showMessageDialog(null,
                                 invitado + " aceptó tu invitación. ¡Inicia la partida (" + dificultad + ")!");
-
+                        partidaTerminada = false;
                         SwingUtilities.invokeLater(() -> {
                             partida = new Memorama(invitado, dificultad, out, usuarioActual);
                             partida.setVisible(true);
@@ -84,7 +89,7 @@ public class Lobby extends javax.swing.JFrame {
                         String[] partes = linea.substring("PARTIDA_CONFIRMADA:".length()).split(";");
                         String invitador = partes[0];
                         String dificultad = partes[1];
-
+                        partidaTerminada = false;
                         JOptionPane.showMessageDialog(null,
                                 "Has aceptado jugar contra " + invitador + ". ¡Inicia la partida (" + dificultad + ")!");
 
@@ -97,15 +102,22 @@ public class Lobby extends javax.swing.JFrame {
                         JOptionPane.showMessageDialog(null,
                                 rechazante + " rechazó tu invitación.");
                     } else if (linea.startsWith("CIERRE_FORZADO:")) {
-                        String otroJugador = linea.substring("CIERRE_FORZADO:".length());
+                        if (!partidaTerminada) {
+                            partidaTerminada = true;
 
-                        JOptionPane.showMessageDialog(null,
-                                "Tu contrincante (" + otroJugador + ") ha salido de la partida. Volverás al lobby.");
+                            String otroJugador = linea.substring("CIERRE_FORZADO:".length());
 
-                        // Cerrar la ventana de juego si está abierta
-                        if (partida != null) {
-                            partida.dispose(); // o setVisible(false)
-                            partida = null;
+                            JOptionPane.showMessageDialog(null,
+                                    "Tu contrincante (" + otroJugador + ") ha salido de la partida. Volverás al lobby.");
+
+                            if (otroJugador != null && !otroJugador.trim().isEmpty()) {
+                                out.println("FIN_PARTIDA;" + otroJugador);
+                            }
+
+                            if (partida != null) {
+                                partida.dispose();
+                                partida = null;
+                            }
                         }
                     } else {
                         System.out.println("Mensaje recibido: " + linea);
@@ -210,28 +222,40 @@ public class Lobby extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void BInvitarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_BInvitarActionPerformed
-        String dificultad = CBDificultad.getSelectedItem().toString();
         String jugadorSeleccionado = LClientes.getSelectedValue();
         if (jugadorSeleccionado == null) {
             JOptionPane.showMessageDialog(null, "Selecciona un jugador para invitar.");
             return;
         }
-        out.println("INVITAR;" + jugadorSeleccionado + ";" + dificultad);
+        if (jugadorSeleccionado.endsWith("(ocupado)")) {
+            JOptionPane.showMessageDialog(null, "No puedes invitar a un jugador que está ocupado.");
+            return;
+        }
+        String dificultad = CBDificultad.getSelectedItem().toString();
+        // Remover estado del string para enviar solo el nombre
+        String nombreJugador = jugadorSeleccionado.substring(0, jugadorSeleccionado.indexOf('(')).trim();
 
+        out.println("INVITAR;" + nombreJugador + ";" + dificultad);
 
     }//GEN-LAST:event_BInvitarActionPerformed
 
     private void actualizarListaUsuarios(String users) {
         String[] separar = users.split(",");
         modeloLista.clear();
-        for (String usuario : separar) {
-            usuario = usuario.trim();
-            if (!usuario.isEmpty() && !usuario.equals(nombreLocal)) {
-                modeloLista.addElement(usuario);
+        for (String usuarioEstado : separar) {
+            usuarioEstado = usuarioEstado.trim();
+            if (!usuarioEstado.isEmpty()) {
+                String[] partes = usuarioEstado.split(";");
+                String nombre = partes[0].trim();
+                String estado = (partes.length > 1) ? partes[1].trim() : "desconocido";
+
+                if (!nombre.equals(nombreLocal)) {
+                    String textoMostrar = nombre + (estado.equalsIgnoreCase("ocupado") ? " (ocupado)" : " (disponible)");
+                    modeloLista.addElement(textoMostrar);
+                }
             }
         }
     }
-
     /**
      * @param args the command line arguments
      */

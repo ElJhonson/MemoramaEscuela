@@ -155,10 +155,10 @@ public class Registro extends javax.swing.JFrame {
             in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 
             String nombre = "Luis Álvarez";
-            String email = "an3@example.com";
-            String tel = "6013345678";
-            String username = "angel3";
-            String password = "seguro123";
+            String email = "ae@example.com";
+            String tel = "69743345678";
+            String username = "angel";
+            String password = "123";
 
             String mensaje = "REGISTRO;" + nombre + ";" + email + ";" + tel + ";" + username + ";" + password;
             out.println(mensaje);

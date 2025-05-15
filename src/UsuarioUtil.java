@@ -37,8 +37,9 @@ public class UsuarioUtil {
         try (Connection conn = Conexion.conectar(); PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setBoolean(1, estado);
             stmt.setString(2, username);
-            ResultSet rs = stmt.executeQuery();
-            return rs.next(); // si existe, login válido
+            int filas = stmt.executeUpdate(); // ✅ CORRECTO
+
+            return filas > 0; // si existe, login válido
         } catch (SQLException e) {
             return false;
         }
@@ -49,27 +50,26 @@ public class UsuarioUtil {
         try (Connection conn = Conexion.conectar(); PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, estado);
             stmt.setString(2, username);
-            ResultSet rs = stmt.executeQuery();
-            return rs.next(); // si existe, login válido
+            int filas = stmt.executeUpdate(); // ✅ CORRECTO
+            return filas > 0;
+// si existe, login válido
         } catch (SQLException e) {
             return false;
         }
     }
-    
-    public static boolean estaDisponible(String username) {
-    boolean disponible = false;
-    try (Connection conn = Conexion.conectar();
-         PreparedStatement ps = conn.prepareStatement("SELECT estado_conexion, estado_juego FROM usuarios WHERE username = ?")) {
-        ps.setString(1, username);
-        ResultSet rs = ps.executeQuery();
-        if (rs.next()) {
-            disponible = rs.getBoolean("estado_conexion") && "disponible".equalsIgnoreCase(rs.getString("estado_juego"));
-        }
-    } catch (SQLException e) {
-        e.printStackTrace();
-    }
-    return disponible;
-}
 
+    public static boolean estaDisponible(String username) {
+        boolean disponible = false;
+        try (Connection conn = Conexion.conectar(); PreparedStatement ps = conn.prepareStatement("SELECT estado_conexion, estado_juego FROM usuarios WHERE username = ?")) {
+            ps.setString(1, username);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                disponible = rs.getBoolean("estado_conexion") && "disponible".equalsIgnoreCase(rs.getString("estado_juego"));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return disponible;
+    }
 
 }

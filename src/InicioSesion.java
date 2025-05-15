@@ -1,3 +1,4 @@
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -112,8 +113,10 @@ public class InicioSesion extends javax.swing.JFrame {
             out = new PrintWriter(socket.getOutputStream(), true);
             in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 
-          String username = "jhonson345";
-            String password = "seguro123";
+//          String username = "jhonson345";
+//            String password = "seguro123";
+            String username = "luis";
+            String password = "123";
             out.println("LOGIN;" + username + ";" + password);
 
             String respuesta = in.readLine();

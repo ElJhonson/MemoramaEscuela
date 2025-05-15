@@ -4,7 +4,6 @@ import java.awt.event.WindowEvent;
 import java.io.PrintWriter;
 import javax.swing.JFrame;
 
-
 public class Memorama extends javax.swing.JFrame {
 
     public Memorama(String contrincante, String dificultad, PrintWriter out, String usuarioActual) {
@@ -16,8 +15,10 @@ public class Memorama extends javax.swing.JFrame {
         // Detectar cierre de ventana para notificar al servidor
         addWindowListener(new WindowAdapter() {
             @Override
-            public void windowClosed(WindowEvent e) {
-                out.println("FIN_PARTIDA;" + usuarioActual);
+            public void windowClosing(WindowEvent e) {
+                if (out != null && contrincante != null && !contrincante.trim().isEmpty()) {
+                    out.println("FIN_PARTIDA;" + contrincante);
+                }
             }
         });
 
