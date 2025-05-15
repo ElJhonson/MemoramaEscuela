@@ -1,5 +1,4 @@
 
-import java.awt.Color;
 import java.io.*;
 import java.net.*;
 
@@ -17,6 +16,7 @@ public class Lobby extends javax.swing.JFrame {
     JButton botones[] = new JButton[2];
     DefaultListModel modeloLista = new DefaultListModel();
     Memorama partida;
+    private boolean enPartida = false;  // inicialmente falso
 
     private boolean connected = false;
     private String usuarioSeleccionado;
@@ -44,7 +44,6 @@ public class Lobby extends javax.swing.JFrame {
             }
         });
 
-        LClientes.setModel(modeloLista);
         escuchaServidor();
     }
 
@@ -56,7 +55,22 @@ public class Lobby extends javax.swing.JFrame {
                 String linea;
                 while ((linea = in.readLine()) != null) {
                     if (linea.startsWith("USUARIOS_CONECTADOS:")) {
+                        System.out.println("Procesando usuarios conectados: " + linea);
+
                         String usuarios = linea.substring("USUARIOS_CONECTADOS:".length());
+                        if (!usuarios.equals("VACIO")) {
+                            String[] lista = usuarios.split(",");
+                            actualizarListaUsuarios(usuarios);
+                            for (String usuarioInfo : lista) {
+                                String[] partes = usuarioInfo.split(";");
+                                if (partes.length >= 2) {
+                                    String nombre = partes[0];
+                                    String estado = partes[1];
+                                    // Aquí actualizas la UI
+                                }
+                            }
+                        }
+
                         actualizarListaUsuarios(usuarios);
                     } else if (linea.startsWith("INVITACION_DE:")) {
                         String[] partes = linea.substring("INVITACION_DE:".length()).split(";");
@@ -75,6 +89,8 @@ public class Lobby extends javax.swing.JFrame {
                         }
 
                     } else if (linea.startsWith("INVITACION_ACEPTADA:")) {
+                        enPartida = true;
+
                         String[] partes = linea.substring("INVITACION_ACEPTADA:".length()).split(";");
                         String invitado = partes[0];
                         String dificultad = partes[1];
@@ -92,6 +108,8 @@ public class Lobby extends javax.swing.JFrame {
                         String invitador = partes[0];
                         String dificultad = partes[1];
                         partidaTerminada = false;
+                        enPartida = true;
+
                         JOptionPane.showMessageDialog(null,
                                 "Has aceptado jugar contra " + invitador + ". ¡Inicia la partida (" + dificultad + ")!");
                         this.setState(JFrame.ICONIFIED);
@@ -106,6 +124,7 @@ public class Lobby extends javax.swing.JFrame {
                     } else if (linea.startsWith("CIERRE_FORZADO:")) {
                         if (!partidaTerminada) {
                             partidaTerminada = true;
+                            enPartida = false;
 
                             String otroJugador = linea.substring("CIERRE_FORZADO:".length());
 
@@ -115,6 +134,8 @@ public class Lobby extends javax.swing.JFrame {
                             if (otroJugador != null && !otroJugador.trim().isEmpty()) {
                                 out.println("FIN_PARTIDA;" + otroJugador);
                                 this.setState(JFrame.NORMAL);
+                                enPartida = false;
+
                             }
 
                             if (partida != null) {
@@ -225,6 +246,11 @@ public class Lobby extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void BInvitarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_BInvitarActionPerformed
+        if (LClientes.getModel().getSize() == 0) {
+            JOptionPane.showMessageDialog(null, "No hay jugadores disponibles.");
+            return;
+        }
+
         String jugadorSeleccionado = LClientes.getSelectedValue();
         if (jugadorSeleccionado == null) {
             JOptionPane.showMessageDialog(null, "Selecciona un jugador para invitar.");
@@ -234,6 +260,12 @@ public class Lobby extends javax.swing.JFrame {
             JOptionPane.showMessageDialog(null, "No puedes invitar a un jugador que está ocupado.");
             return;
         }
+
+        if (enPartida) {
+            JOptionPane.showMessageDialog(null, "Ya estás en una partida, no puedes invitar.");
+            return;
+        }
+
         String dificultad = CBDificultad.getSelectedItem().toString();
         // Remover estado del string para enviar solo el nombre
         String nombreJugador = jugadorSeleccionado.substring(0, jugadorSeleccionado.indexOf('(')).trim();
@@ -243,22 +275,27 @@ public class Lobby extends javax.swing.JFrame {
     }//GEN-LAST:event_BInvitarActionPerformed
 
     private void actualizarListaUsuarios(String users) {
-        String[] separar = users.split(",");
-        modeloLista.clear();
-        for (String usuarioEstado : separar) {
-            usuarioEstado = usuarioEstado.trim();
-            if (!usuarioEstado.isEmpty()) {
-                String[] partes = usuarioEstado.split(";");
-                String nombre = partes[0].trim();
-                String estado = (partes.length > 1) ? partes[1].trim() : "desconocido";
+        SwingUtilities.invokeLater(() -> {
+            String[] separar = users.split(",");
+            modeloLista.clear();
+            for (String usuarioEstado : separar) {
+                usuarioEstado = usuarioEstado.trim();
+                if (!usuarioEstado.isEmpty()) {
+                    String[] partes = usuarioEstado.split(";");
+                    if (partes.length >= 1) {
+                        String nombre = partes[0].trim();
+                        String estado = (partes.length > 1) ? partes[1].trim() : "desconocido";
 
-                if (!nombre.equals(nombreLocal)) {
-                    String textoMostrar = nombre + (estado.equalsIgnoreCase("ocupado") ? " (ocupado)" : " (disponible)");
-                    modeloLista.addElement(textoMostrar);
+                        if (!nombre.equals(nombreLocal)) {
+                            String textoMostrar = nombre + (estado.equalsIgnoreCase("ocupado") ? " (ocupado)" : " (disponible)");
+                            modeloLista.addElement(textoMostrar);
+                        }
+                    }
                 }
             }
-        }
+        });
     }
+
     /**
      * @param args the command line arguments
      */

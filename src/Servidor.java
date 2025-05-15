@@ -7,7 +7,8 @@ import javax.swing.*;
 public class Servidor extends javax.swing.JFrame {
 
     private static final int PORT = 5555;
-    private static final Set<PrintWriter> clientWriters = new HashSet<>();
+    private static final Set<PrintWriter> clientWriters = Collections.synchronizedSet(new HashSet<>());
+
     private static final Set<String> connectedUsers = new HashSet<>();
     private static final List<ClientHandler> clientHandlers = new ArrayList<>();
     private static JTextArea taMensajes;
@@ -43,9 +44,10 @@ public class Servidor extends javax.swing.JFrame {
             });
         }
         String listaUsuarios = sb.length() > 0 ? sb.substring(0, sb.length() - 1) : "";
+
         synchronized (clientWriters) {
             for (PrintWriter writer : clientWriters) {
-                writer.println("USUARIOS_CONECTADOS:" + listaUsuarios);
+                writer.println("USUARIOS_CONECTADOS:" + (listaUsuarios.isEmpty() ? "VACIO" : listaUsuarios));
             }
         }
     }
@@ -135,6 +137,8 @@ public class Servidor extends javax.swing.JFrame {
                             estadosUsuarios.put(userName, "disponible");
 
                         }
+                        actualizarEstadoUsuario(usuario, "disponible");
+
                         enviarUsuariosConectados();
 
                     } else {
@@ -204,11 +208,11 @@ public class Servidor extends javax.swing.JFrame {
                         if (userName != null) {
                             actualizarEstadoUsuario(userName, "disponible");
                         }
-                        
+
                         enviarUsuariosConectados(); // Para actualizar la lista en todos
 
                     } else if (input.startsWith("FIN_PARTIDA;")) {
-                        
+
                         partes = input.split(";");
                         if (partes.length >= 2) {
                             String contrincante = partes[1].trim();
