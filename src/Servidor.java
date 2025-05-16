@@ -15,6 +15,7 @@ public class Servidor extends javax.swing.JFrame {
     private static final Map<String, PrintWriter> usuariosConectados = new HashMap<>();
     // Map<username, estado>
     private static Map<String, String> estadosUsuarios = Collections.synchronizedMap(new HashMap<>());
+    private static final Map<String, Partida> partidasActivas = new HashMap<>();
 
     public Servidor() {
         initComponents();
@@ -194,6 +195,21 @@ public class Servidor extends javax.swing.JFrame {
                                     actualizarEstadoUsuario(userName, "ocupado");
                                     actualizarEstadoUsuario(origen, "ocupado");
                                     enviarUsuariosConectados();
+
+                                    // Crear partida
+                                    Partida partida = new Partida(userName, origen, dificultad);
+                                    String partidaID = userName + "-" + origen;
+                                    synchronized (partidasActivas) {
+                                        partidasActivas.put(partidaID, partida);
+                                    }
+
+                                    // Mandar cartas a ambos
+                                    List<String> cartas = partida.getCartas();
+                                    String cartasStr = String.join(",", cartas);
+                                    salidaOrigen.println("INICIAR_PARTIDA:" + userName + ";" + dificultad + ";" + cartasStr);
+                                    out.println("INICIAR_PARTIDA:" + origen + ";" + dificultad + ";" + cartasStr);
+                                    
+
                                     salidaOrigen.println("INVITACION_ACEPTADA:" + userName + ";" + dificultad);
                                     out.println("PARTIDA_CONFIRMADA:" + origen + ";" + dificultad);
                                 } else {
@@ -213,6 +229,8 @@ public class Servidor extends javax.swing.JFrame {
 
                     } else if (input.startsWith("FIN_PARTIDA;")) {
 
+                        
+                        
                         partes = input.split(";");
                         if (partes.length >= 2) {
                             String contrincante = partes[1].trim();

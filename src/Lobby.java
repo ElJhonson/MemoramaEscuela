@@ -90,32 +90,35 @@ public class Lobby extends javax.swing.JFrame {
 
                     } else if (linea.startsWith("INVITACION_ACEPTADA:")) {
                         enPartida = true;
-
                         String[] partes = linea.substring("INVITACION_ACEPTADA:".length()).split(";");
                         String invitado = partes[0];
                         String dificultad = partes[1];
 
-                        JOptionPane.showMessageDialog(null,
-                                invitado + " aceptó tu invitación. ¡Inicia la partida (" + dificultad + ")!");
+//                        JOptionPane.showMessageDialog(null,
+//                                invitado + " aceptó tu invitación. Esperando inicio de partida...");
                         partidaTerminada = false;
-                        SwingUtilities.invokeLater(() -> {
-                            this.setState(JFrame.ICONIFIED);
-                            partida = new Memorama(invitado, dificultad, out, usuarioActual);
-                            partida.setVisible(true);
-                        });
+
+                        // Ya no abras Memorama aquí
                     } else if (linea.startsWith("PARTIDA_CONFIRMADA:")) {
                         String[] partes = linea.substring("PARTIDA_CONFIRMADA:".length()).split(";");
                         String invitador = partes[0];
                         String dificultad = partes[1];
+
                         partidaTerminada = false;
                         enPartida = true;
 
-                        JOptionPane.showMessageDialog(null,
-                                "Has aceptado jugar contra " + invitador + ". ¡Inicia la partida (" + dificultad + ")!");
-                        this.setState(JFrame.ICONIFIED);
+                        // No abras Memorama todavía
+                    } else if (linea.startsWith("INICIAR_PARTIDA:")) {
+                        String[] partes = linea.substring("INICIAR_PARTIDA:".length()).split(";");
+                        String contrincante = partes[0];
+                        String dificultad = partes[1];
+                        String ordenCartas = partes[2];
+
+                          // minimizar ventana actual
                         SwingUtilities.invokeLater(() -> {
-                            partida = new Memorama(invitador, dificultad, out, usuarioActual);
+                            partida = new Memorama(contrincante, dificultad, out, usuarioActual, ordenCartas);
                             partida.setVisible(true);
+                            this.setState(JFrame.ICONIFIED);
                         });
                     } else if (linea.startsWith("INVITACION_RECHAZADA:")) {
                         String rechazante = linea.substring("INVITACION_RECHAZADA:".length());

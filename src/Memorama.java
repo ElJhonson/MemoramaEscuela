@@ -22,7 +22,7 @@ public class Memorama extends javax.swing.JFrame {
     private boolean puedeJugar = false;
     private int pares;
 
-    public Memorama(String contrincante, String dificultad, PrintWriter out, String usuarioActual) {
+    public Memorama(String contrincante, String dificultad, PrintWriter out, String usuarioActual, String ordenCartas) {
         initComponents();
         setTitle("Partida con " + contrincante + " - Dificultad: " + dificultad);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
@@ -47,19 +47,14 @@ public class Memorama extends javax.swing.JFrame {
                 pares = 8;
         }
 
-        int totalCartas = pares * 2;
+        String[] tokens = ordenCartas.split(",");
+        imagenes = new Icon[tokens.length];
+        int totalCartas = tokens.length;
+        pares = totalCartas / 2;  // opcional, para tener pares actualizado
 
-        // Cargar imágenes
-        imagenes = new Icon[totalCartas];
-        List<Integer> indices = new ArrayList<>();
-        for (int i = 1; i <= pares; i++) {
-            indices.add(i);
-            indices.add(i); // Dos veces para formar par
-        }
-        Collections.shuffle(indices);
-        for (int i = 0; i < totalCartas; i++) {
-            imagenes[i] = new ImageIcon(getClass().getResource("/imagenes/" + indices.get(i) + ".png"));
-
+        for (int i = 0; i < tokens.length; i++) {
+            int imgNum = Integer.parseInt(tokens[i]);
+            imagenes[i] = new ImageIcon(getClass().getResource("/imagenes/" + imgNum + ".png"));
         }
 
         botones = new JButton[totalCartas];
@@ -75,7 +70,9 @@ public class Memorama extends javax.swing.JFrame {
             botones[i].setIcon(imagenReverso);
             botones[i].putClientProperty("indice", i);
             botones[i].addActionListener(e -> {
-                if (!puedeJugar) return;
+                if (!puedeJugar) {
+                    return;
+                }
                 JButton btn = (JButton) e.getSource();
                 int idx = (int) btn.getClientProperty("indice");
                 btn.setIcon(imagenes[idx]);
@@ -98,7 +95,7 @@ public class Memorama extends javax.swing.JFrame {
                 puedeJugar = true;
             }
         });
-        timer.setRepeats(false); 
+        timer.setRepeats(false);
         timer.start();
 
         PTablero.revalidate();
