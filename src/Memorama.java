@@ -1,5 +1,7 @@
 
 import java.awt.GridLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.PrintWriter;
@@ -10,13 +12,14 @@ import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JFrame;
+import javax.swing.Timer;
 
 public class Memorama extends javax.swing.JFrame {
 
     private JButton[] botones;
     private Icon[] imagenes;
     private Icon imagenReverso = new ImageIcon(getClass().getResource("/imagenes/reverso.png"));
-
+    private boolean puedeJugar = false;
     private int pares;
 
     public Memorama(String contrincante, String dificultad, PrintWriter out, String usuarioActual) {
@@ -72,12 +75,31 @@ public class Memorama extends javax.swing.JFrame {
             botones[i].setIcon(imagenReverso);
             botones[i].putClientProperty("indice", i);
             botones[i].addActionListener(e -> {
+                if (!puedeJugar) return;
                 JButton btn = (JButton) e.getSource();
                 int idx = (int) btn.getClientProperty("indice");
                 btn.setIcon(imagenes[idx]);
             });
             PTablero.add(botones[i]);
         }
+
+        // Mostrar todas las cartas al inicio
+        for (int i = 0; i < totalCartas; i++) {
+            botones[i].setIcon(imagenes[i]);
+        }
+
+// Usar un Timer para voltearlas después de unos segundos
+        Timer timer = new Timer(3000, new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                for (int i = 0; i < totalCartas; i++) {
+                    botones[i].setIcon(imagenReverso);
+                }
+                puedeJugar = true;
+            }
+        });
+        timer.setRepeats(false); 
+        timer.start();
 
         PTablero.revalidate();
         PTablero.repaint();
