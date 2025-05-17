@@ -146,7 +146,7 @@ public class IniciarSesion extends javax.swing.JFrame {
             out = new PrintWriter(socket.getOutputStream(), true);
             in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 
-            String username = "angel";
+            String username = "luis";
             String password = "123";
             out.println("LOGIN;" + username + ";" + password);
 

@@ -5,13 +5,11 @@ import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.PrintWriter;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JFrame;
+import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 
 public class Memorama extends javax.swing.JFrame {
@@ -76,6 +74,8 @@ public class Memorama extends javax.swing.JFrame {
                 JButton btn = (JButton) e.getSource();
                 int idx = (int) btn.getClientProperty("indice");
                 btn.setIcon(imagenes[idx]);
+                out.println("VOLTEAR_CARTA;" + idx);
+
             });
             PTablero.add(botones[i]);
         }
@@ -113,6 +113,17 @@ public class Memorama extends javax.swing.JFrame {
         pack();
         setVisible(true);
     }
+
+
+    public void voltearCartaDesdeOtroJugador(int indice) {
+        SwingUtilities.invokeLater(() -> {
+            if (indice >= 0 && indice < botones.length) {
+                botones[indice].setIcon(imagenes[indice]);
+                botones[indice].setEnabled(false); // o como manejes la lógica de desactivar
+            }
+        });
+    }
+    
 
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents

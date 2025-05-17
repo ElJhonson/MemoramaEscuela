@@ -68,6 +68,17 @@ public class Servidor extends javax.swing.JFrame {
         enviarUsuariosConectados();
     }
 
+    private static Partida obtenerPartidaDeUsuario(String nombreUsuario) {
+        synchronized (partidasActivas) {
+            for (Partida partida : partidasActivas.values()) {
+                if (partida.getJugador1().equals(nombreUsuario) || partida.getJugador2().equals(nombreUsuario)) {
+                    return partida;
+                }
+            }
+        }
+        return null;
+    }
+
     private static class ClientHandler extends Thread {
 
         private Socket socket;
@@ -208,7 +219,6 @@ public class Servidor extends javax.swing.JFrame {
                                     String cartasStr = String.join(",", cartas);
                                     salidaOrigen.println("INICIAR_PARTIDA:" + userName + ";" + dificultad + ";" + cartasStr);
                                     out.println("INICIAR_PARTIDA:" + origen + ";" + dificultad + ";" + cartasStr);
-                                    
 
                                     salidaOrigen.println("INVITACION_ACEPTADA:" + userName + ";" + dificultad);
                                     out.println("PARTIDA_CONFIRMADA:" + origen + ";" + dificultad);
@@ -227,10 +237,35 @@ public class Servidor extends javax.swing.JFrame {
 
                         enviarUsuariosConectados(); // Para actualizar la lista en todos
 
-                    } else if (input.startsWith("FIN_PARTIDA;")) {
+                    }else if (input.startsWith("VOLTEAR_CARTA;")) {
+                        String[] datos = input.split(";");
+                        if (datos.length == 2) {
+                            int indice = Integer.parseInt(datos[1]);
 
-                        
-                        
+                            Partida partida = obtenerPartidaDeUsuario(userName);
+                            if (partida != null) {
+                                // Notificar al otro jugador
+                                String otroJugador = partida.getJugador1().equals(userName)
+                                        ? partida.getJugador2()
+                                        : partida.getJugador1();
+
+                                PrintWriter salidaOtro;
+                                synchronized (usuariosConectados) {
+                                    salidaOtro = usuariosConectados.get(otroJugador);
+                                }
+
+                                if (salidaOtro != null) {
+                                    salidaOtro.println("VOLTEAR_CARTA:" + indice);
+                                    salidaOtro.flush();
+
+                                }
+                            }
+                        }
+                    }
+                    
+                    
+                    else if (input.startsWith("FIN_PARTIDA;")) {
+
                         partes = input.split(";");
                         if (partes.length >= 2) {
                             String contrincante = partes[1].trim();

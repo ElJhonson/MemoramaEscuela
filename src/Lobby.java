@@ -114,12 +114,19 @@ public class Lobby extends javax.swing.JFrame {
                         String dificultad = partes[1];
                         String ordenCartas = partes[2];
 
-                          // minimizar ventana actual
+                        // minimizar ventana actual
                         SwingUtilities.invokeLater(() -> {
                             partida = new Memorama(contrincante, dificultad, out, usuarioActual, ordenCartas);
                             partida.setVisible(true);
                             this.setState(JFrame.ICONIFIED);
                         });
+                    } else if (linea.startsWith("VOLTEAR_CARTA:")) {
+                        int indice = Integer.parseInt(linea.substring("VOLTEAR_CARTA:".length()));
+                        
+                        if (partida != null) {
+                            System.out.println("VOLTEAR_CARTA recibido: " + indice);
+                            partida.voltearCartaDesdeOtroJugador(indice);
+                        }
                     } else if (linea.startsWith("INVITACION_RECHAZADA:")) {
                         String rechazante = linea.substring("INVITACION_RECHAZADA:".length());
                         JOptionPane.showMessageDialog(null,
